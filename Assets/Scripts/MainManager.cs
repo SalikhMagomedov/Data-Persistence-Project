@@ -1,5 +1,4 @@
-using System.Collections;
-using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -11,6 +10,7 @@ public class MainManager : MonoBehaviour
     public Rigidbody Ball;
 
     public Text ScoreText;
+    public Text BestScoreText;
     public GameObject GameOverText;
     
     private bool m_Started = false;
@@ -18,10 +18,14 @@ public class MainManager : MonoBehaviour
     
     private bool m_GameOver = false;
 
+    private PlayerData _bestPlayer;
+
     
     // Start is called before the first frame update
     void Start()
     {
+        LoadPlayerData();
+        
         const float step = 0.6f;
         int perLine = Mathf.FloorToInt(4.0f / step);
         
@@ -65,12 +69,46 @@ public class MainManager : MonoBehaviour
     void AddPoint(int point)
     {
         m_Points += point;
-        ScoreText.text = $"Score : {m_Points}";
+        ScoreText.text = $"Score : {GameManager.Instance.playerName} : {m_Points}";
+    }
+
+    private void SavePlayerData()
+    {
+        if (m_Points < _bestPlayer.score)
+        {
+            return;
+        }
+
+        _bestPlayer.name = GameManager.Instance.playerName;
+        _bestPlayer.score = m_Points;
+
+        var json = JsonUtility.ToJson(_bestPlayer);
+        
+        File.WriteAllText($"{Application.persistentDataPath}/score.json", json);
+    }
+
+    private void LoadPlayerData()
+    {
+        _bestPlayer = new PlayerData();
+        var path = $"{Application.persistentDataPath}/score.json";
+        if (File.Exists(path))
+        {
+            var json = File.ReadAllText(path);
+            _bestPlayer = JsonUtility.FromJson<PlayerData>(json);
+        }
+        else
+        {
+            _bestPlayer.name = "Name";
+            _bestPlayer.score = 0;
+        }
+
+        BestScoreText.text = $"Best score : {_bestPlayer.name} : {_bestPlayer.score}";
     }
 
     public void GameOver()
     {
         m_GameOver = true;
         GameOverText.SetActive(true);
+        SavePlayerData();
     }
 }
